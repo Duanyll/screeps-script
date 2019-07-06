@@ -1,8 +1,13 @@
 // example declaration file - remove these and add your own custom typings
 
-// memory extension samples
+declare enum CreepRole {
+  Harvest,
+  Build,
+  Upgarde
+}
+
 interface CreepMemory {
-  role: string;
+  role: CreepRole;
   room: string;
   working: boolean;
 }
