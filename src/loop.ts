@@ -26,15 +26,15 @@ function releaseMemory(): void {
 
 function manageCreep(): void {
     for (const name in Game.creeps) {
-        let creep = Game.getObjectById(name) as Creep;
+        let creep = Game.creeps[name];
         switch (creep.memory.role) {
-            case CreepRole.Build:
+            case 'build':
                 runBuilder(creep);
                 break;
-            case CreepRole.Harvest:
+            case 'harvest':
                 runHarvester(creep);
                 break;
-            case CreepRole.Upgarde:
+            case 'upgrade':
                 runUpgrader(creep);
                 break;
             default:

@@ -1,13 +1,7 @@
 // example declaration file - remove these and add your own custom typings
 
-declare enum CreepRole {
-  Harvest,
-  Build,
-  Upgarde
-}
-
 interface CreepMemory {
-  role: CreepRole;
+  role: string;
   room: string;
   working: boolean;
 }

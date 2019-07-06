@@ -1,7 +1,7 @@
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
-    if (creep.carry.energy == 0) {
+    if (creep.carry.energy < creep.carryCapacity) {
         const sources = creep.room.find(FIND_SOURCES);
         if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
             creep.moveTo(sources[0]);

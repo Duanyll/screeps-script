@@ -4,39 +4,42 @@ const expectedBuilderCount = 2;
 
 // 目前策略: 按照固定数量补充
 export function spawnCreep(): void {
-    let roleCount = new Map<string, Map<CreepRole, number>>();
+    let roleCount = new Map<string, Map<string, number>>();
+    for (const name in Game.rooms) {
+        roleCount.set(name, new Map<string, number>());
+    }
     for (const name in Game.creeps) {
-        const creep = Game.getObjectById(name) as Creep;
+        const creep = Game.creeps[name];
         if (roleCount.get(creep.room.name) == undefined) {
-            roleCount.set(creep.room.name, new Map<CreepRole, number>());
+            roleCount.set(creep.room.name, new Map<string, number>());
         }
-        if ((roleCount.get(creep.room.name) as Map<CreepRole, number>).get(creep.memory.role) == undefined) {
-            (roleCount.get(creep.room.name) as Map<CreepRole, number>).set(creep.memory.role, 0);
+        if ((roleCount.get(creep.room.name) as Map<string, number>).get(creep.memory.role) == undefined) {
+            (roleCount.get(creep.room.name) as Map<string, number>).set(creep.memory.role, 0);
         }
-        (roleCount.get(creep.room.name) as Map<CreepRole, number>).set(creep.memory.role,
-            (roleCount.get(creep.room.name) as Map<CreepRole, number>).get(creep.memory.role) as number + 1);
+        (roleCount.get(creep.room.name) as Map<string, number>).set(creep.memory.role,
+            (roleCount.get(creep.room.name) as Map<string, number>).get(creep.memory.role) as number + 1);
     }
     let SpawnID = 0;
-    roleCount.forEach((count: Map<CreepRole, number>, roomName: string): void => {
+    roleCount.forEach((count: Map<string, number>, roomName: string): void => {
         const spawns = Game.rooms[roomName].find(FIND_MY_SPAWNS);
         spawns.forEach((spawn: StructureSpawn) => {
             if (spawn.spawning) return;
-            if (count.get(CreepRole.Harvest) as number < expectedHarvesterCount) {
+            if (count.get('harvest') == undefined || count.get('harvest') as number < expectedHarvesterCount) {
                 const newName = `harv${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: CreepRole.Harvest, working: true, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'harvest', working: true, room: roomName } });
                 return;
             }
-            if (count.get(CreepRole.Upgarde) as number < expectedUpgraderCount) {
+            if (count.get('upgrade') == undefined || count.get('upgrade') as number < expectedUpgraderCount) {
                 const newName = `upgr${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: CreepRole.Upgarde, working: true, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'upgrade', working: true, room: roomName } });
                 return;
             }
-            if (count.get(CreepRole.Build) as number < expectedBuilderCount) {
+            if (count.get('build') == undefined || count.get('build') as number < expectedBuilderCount) {
                 const newName = `build${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: CreepRole.Build, working: false, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'build', working: false, room: roomName } });
                 return;
             }
         });
