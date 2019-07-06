@@ -1,3 +1,5 @@
+import { getSource, arriveAtSource } from "./taskAllocator";
+
 // 采集energy并升级controller
 export function runUpgrader(creep: Creep): void {
     if (creep.memory.working && creep.carry.energy == 0) {
@@ -7,15 +9,21 @@ export function runUpgrader(creep: Creep): void {
         creep.memory.working = true;
     }
     if (creep.memory.working) {
+        creep.memory.targetSource = undefined;
         const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
         const controller = creep.room.controller as StructureController;
         if (creep.upgradeController(controller) == ERR_NOT_IN_RANGE) {
             creep.moveTo(controller);
         }
     } else {
-        const sources = creep.room.find(FIND_SOURCES);
-        if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(sources[0]);
+        if (!creep.memory.targetSource) {
+            creep.memory.targetSource = getSource(creep.room).id;
+        }
+        const source = Game.getObjectById(creep.memory.targetSource) as Source;
+        if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(source);
+        } else {
+            arriveAtSource(source);
         }
     }
 }

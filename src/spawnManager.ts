@@ -1,6 +1,4 @@
-const expectedHarvesterCount = 3;
-const expectedUpgraderCount = 2;
-const expectedBuilderCount = 2;
+import * as Config from "config";
 
 // 目前策略: 按照固定数量补充
 export function spawnCreep(): void {
@@ -24,22 +22,34 @@ export function spawnCreep(): void {
         const spawns = Game.rooms[roomName].find(FIND_MY_SPAWNS);
         spawns.forEach((spawn: StructureSpawn) => {
             if (spawn.spawning) return;
-            if (count.get('harvest') == undefined || count.get('harvest') as number < expectedHarvesterCount) {
+            if (count.get('harvest') == undefined || count.get('harvest') as number < Config.expectedHarvesterCount) {
                 const newName = `harv${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'harvest', working: true, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
+                    memory: {
+                        role: 'harvest', working: true, room: roomName, targetSource: undefined
+                    }
+                });
                 return;
             }
-            if (count.get('upgrade') == undefined || count.get('upgrade') as number < expectedUpgraderCount) {
+            if (count.get('upgrade') == undefined || count.get('upgrade') as number < Config.expectedUpgraderCount) {
                 const newName = `upgr${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'upgrade', working: true, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
+                    memory: {
+                        role: 'upgrade', working: true, room: roomName, targetSource: undefined
+                    }
+                });
                 return;
             }
-            if (count.get('build') == undefined || count.get('build') as number < expectedBuilderCount) {
+            if (count.get('build') == undefined || count.get('build') as number < Config.expectedBuilderCount) {
                 const newName = `build${Game.time}${SpawnID++}`;
                 console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE], newName, { memory: { role: 'build', working: false, room: roomName } });
+                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
+                    memory: {
+                        role: 'build', working: false, room: roomName, targetSource: undefined
+                    }
+                });
                 return;
             }
         });
