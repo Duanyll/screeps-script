@@ -5,7 +5,7 @@ export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
     if (creep.carry.energy < creep.carryCapacity) {
         if (!creep.memory.targetSource) {
-            creep.memory.targetSource = getSource(creep.room).id;
+            creep.memory.targetSource = (creep.pos.findClosestByPath(FIND_SOURCES) as Source).id;
         }
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {

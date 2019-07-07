@@ -17,7 +17,7 @@ export function runUpgrader(creep: Creep): void {
         }
     } else {
         if (!creep.memory.targetSource) {
-            creep.memory.targetSource = getSource(creep.room).id;
+            creep.memory.targetSource = (creep.pos.findClosestByPath(FIND_SOURCES) as Source).id;
         }
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
