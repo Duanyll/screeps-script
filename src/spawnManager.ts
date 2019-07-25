@@ -1,57 +1,107 @@
 import * as Config from "config";
 
-// 目前策略: 按照固定数量补充
-export function spawnCreep(): void {
-    let roleCount = new Map<string, Map<string, number>>();
-    for (const name in Game.rooms) {
-        roleCount.set(name, new Map<string, number>());
-    }
-    for (const name in Game.creeps) {
-        const creep = Game.creeps[name];
-        if (roleCount.get(creep.room.name) == undefined) {
-            roleCount.set(creep.room.name, new Map<string, number>());
-        }
-        if ((roleCount.get(creep.room.name) as Map<string, number>).get(creep.memory.role) == undefined) {
-            (roleCount.get(creep.room.name) as Map<string, number>).set(creep.memory.role, 0);
-        }
-        (roleCount.get(creep.room.name) as Map<string, number>).set(creep.memory.role,
-            (roleCount.get(creep.room.name) as Map<string, number>).get(creep.memory.role) as number + 1);
-    }
-    let SpawnID = 0;
-    roleCount.forEach((count: Map<string, number>, roomName: string): void => {
-        const spawns = Game.rooms[roomName].find(FIND_MY_SPAWNS);
-        spawns.forEach((spawn: StructureSpawn) => {
-            if (spawn.spawning) return;
-            if (count.get('harvest') == undefined || count.get('harvest') as number < Config.expectedHarvesterCount) {
-                const newName = `harv${Game.time}${SpawnID++}`;
-                console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
-                    memory: {
-                        role: 'harvest', working: true, room: roomName, targetSource: undefined
-                    }
-                });
-                return;
-            }
-            if (count.get('upgrade') == undefined || count.get('upgrade') as number < Config.expectedUpgraderCount) {
-                const newName = `upgr${Game.time}${SpawnID++}`;
-                console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
-                    memory: {
-                        role: 'upgrade', working: true, room: roomName, targetSource: undefined
-                    }
-                });
-                return;
-            }
-            if (count.get('build') == undefined || count.get('build') as number < Config.expectedBuilderCount) {
-                const newName = `build${Game.time}${SpawnID++}`;
-                console.log(`Spawning new creep ${newName} at ${spawn.name}`);
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], newName, {
-                    memory: {
-                        role: 'build', working: false, room: roomName, targetSource: undefined
-                    }
-                });
-                return;
-            }
-        });
+function getSpawnEnergy(room: Room): number {
+    let ans = 0;
+    const spawns = room.find(FIND_MY_SPAWNS);
+    spawns.forEach((spawn: StructureSpawn) => {
+        ans += spawn.energy;
     });
+    const extensions = room.find(FIND_MY_STRUCTURES, { filter: (structure: Structure) => { return structure.structureType == STRUCTURE_EXTENSION } });
+    extensions.forEach((structure: Structure) => {
+        ans += (structure as StructureExtension).energy;
+    });
+    return ans;
+}
+
+function getWorkerCreepPart(energy: number): boolean | BodyPartConstant[] {
+    if (energy < 300) return false;
+    let ret: BodyPartConstant[] = [];
+    let groupOfPart = Math.floor(energy / 250);
+    for (let i = 0; i < groupOfPart; i++) {
+        ret.push(WORK);
+    }
+    ret.push(CARRY);
+    for (let i = 0; i < groupOfPart; i++) {
+        ret.push(CARRY);
+    }
+    for (let i = 0; i < groupOfPart; i++) {
+        ret.push(MOVE);
+        ret.push(MOVE);
+    }
+    return ret;
+}
+
+function spawnHarvest(source: Source, spawn: StructureSpawn, energy: number): boolean {
+    if (spawn.spawning) return false;
+    const bodyPart = getWorkerCreepPart(energy);
+    if (bodyPart != false) {
+        const creepName = `harv-${Game.time}-${source.id}`;
+        const creepMemory: CreepMemory = {
+            role: 'harvest', working: true, targetSource: source.id, room: spawn.room.name, workType: undefined
+        };
+        spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
+        Memory.hervesterForSource[source.id] = creepName;
+        console.log(`Spawning creep ${creepName}`);
+        return true;
+    }
+    return false;
+}
+
+function spawnWorker(spawn: StructureSpawn, energy: number): boolean {
+    if (spawn.spawning) return false;
+    const bodyPart = getWorkerCreepPart(energy);
+    if (bodyPart != false) {
+        const creepName = `work-${Game.time}-${spawn.id}`;
+        const creepMemory: CreepMemory = {
+            role: 'worker', working: false, targetSource: undefined, room: spawn.room.name, workType: undefined
+        };
+        spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
+        console.log(`Spawning creep ${creepName}`);
+        return true;
+    }
+    return false;
+}
+
+export function spawnCreep(): void {
+    if (Memory.hervesterForSource == undefined) {
+        Memory.hervesterForSource = new Object();
+    }
+    for (const roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
+        const spawns = room.find(FIND_MY_SPAWNS);
+        const energy = getSpawnEnergy(room);
+        if (spawns.length > 0) {
+            // 暂时只考虑1个spawn的情况
+            const spawn = spawns[0];
+            if (spawn.spawning) continue;
+            let spawnedThisTick = false;
+
+            // 补充harvest
+            const sources = room.find(FIND_SOURCES);
+            sources.forEach((source: Source) => {
+                console.log(`Checking source ${source.id}`);
+                const harvID: string | undefined = Memory.hervesterForSource[source.id];
+                if (harvID == undefined) {
+                    if (spawnHarvest(source, spawn, energy)) { spawnedThisTick = true; return; }
+                } else {
+                    const creep = Game.creeps[harvID];
+                    if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
+                        // need to spawn a new creep
+                        if (spawnHarvest(source, spawn, energy)) { spawnedThisTick = true; return; }
+                    } else {
+                        console.log(`No need to spawn creep.`);
+                    }
+                }
+            });
+
+            if (spawnedThisTick) continue;
+            // 补充worker
+            const workers = room.find(FIND_MY_CREEPS, {
+                filter: (creep: Creep) => { return creep.memory.role == 'worker' }
+            });
+            if (workers.length < 8) {
+                spawnWorker(spawn, energy);
+            }
+        }
+    }
 }

@@ -1,37 +1,25 @@
-import { getSource, arriveAtSource } from "./taskAllocator";
+import { refillSpawnOrExtension, constructStructures, repairWallOrRoad } from "./task";
 
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
     if (creep.carry.energy < creep.carryCapacity) {
-        if (!creep.memory.targetSource) {
-            creep.memory.targetSource = (creep.pos.findClosestByPath(FIND_SOURCES) as Source).id;
-        }
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);
-        } else {
-            arriveAtSource(source);
         }
     } else {
-        creep.memory.targetSource = undefined;
-        const targets = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure: Structure): boolean => {
-                if (structure.structureType == STRUCTURE_EXTENSION) {
-                    let extension = structure as StructureExtension;
-                    return extension.energy < extension.energyCapacity;
-                }
-                if (structure.structureType == STRUCTURE_SPAWN) {
-                    let extension = structure as StructureSpawn;
-                    return extension.energy < extension.energyCapacity;
-                }
-                return false;
-            }
+        const storge = creep.room.find(FIND_MY_STRUCTURES, {
+            filter: (structure: Structure) => { return structure.structureType == STRUCTURE_CONTAINER }
         });
-        if (targets.length > 0) {
-            if (creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(targets[0]);
+        if (storge.length > 0) {
+            if (creep.transfer(storge[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(storge[0]);
             }
+            return;
+        }
+        if (!refillSpawnOrExtension(creep)) {
+            if (!constructStructures(creep)) repairWallOrRoad(creep);
         }
     }
 }

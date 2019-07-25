@@ -1,11 +1,9 @@
-import "roles/builder";
-import "roles/harvester";
-import "roles/upgrader";
-import { runBuilder } from "roles/builder";
-import { runHarvester } from "roles/harvester";
-import { runUpgrader } from "roles/upgrader";
+import { runHarvester } from "./roles/harvester";
 import { spawnCreep } from "./spawnManager";
 import { manageTower } from "./towerManager";
+import * as Config from "config";
+import { runWorker } from "roles/worker";
+import { allocateTask } from "roles/task";
 
 export function runLoop(): void {
     releaseMemory();
@@ -25,20 +23,18 @@ function releaseMemory(): void {
 }
 
 function manageCreep(): void {
+    allocateTask();
     for (const name in Game.creeps) {
         let creep = Game.creeps[name];
         switch (creep.memory.role) {
-            case 'build':
-                runBuilder(creep);
-                break;
             case 'harvest':
                 runHarvester(creep);
                 break;
-            case 'upgrade':
-                runUpgrader(creep);
+            case 'worker':
+                runWorker(creep);
                 break;
             default:
-                console.log(`Unknown creep role: ${name}`);
+                console.log(`Unknown creep role ${creep.memory.role}, creep: ${name}`);
                 break;
         }
     }

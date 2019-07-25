@@ -5,12 +5,14 @@ interface CreepMemory {
   room: string;
   working: boolean;
   targetSource: string | undefined;
+  workType: any
 }
 
 interface Memory {
   uuid: number;
   log: any;
-  sourceAllocatedCount: Map<string, number>;
+  status: any;
+  hervesterForSource: any;
 }
 
 // `global` extension samples
