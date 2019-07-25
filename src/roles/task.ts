@@ -38,10 +38,11 @@ export function refillSpawnOrExtension(creep: Creep) : boolean {
 }
 
 export function repairWallOrRoad(creep: Creep): boolean {
-    const repairableWalls = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+    const repairableWalls = creep.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: (structure: Structure) => {
             return structure.structureType == STRUCTURE_WALL && structure.hits < Config.expectedWallStrength
-                || structure.structureType == STRUCTURE_ROAD && structure.hits < Config.expectedWallStrength;
+                || structure.structureType == STRUCTURE_ROAD && structure.hits < Config.expectedWallStrength
+                || structure.structureType == STRUCTURE_RAMPART && structure.hits < Config.expectedWallStrength;
         }
     });
     if (repairableWalls) {
@@ -73,6 +74,22 @@ export function upgradeController(creep: Creep) {
     }
 }
 
+export function refillTower(creep: Creep) {
+    const sites = creep.room.find(FIND_MY_STRUCTURES, {
+        filter: (structure: Structure) => {
+            return structure.structureType == STRUCTURE_TOWER && (structure as StructureTower).energy < (structure as StructureTower).energyCapacity;
+        }
+    });
+    if (sites.length > 0) {
+        if (creep.transfer(sites[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(sites[0]);
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
 export function allocateTask() {
     for (const name in Game.rooms) {
         const room = Game.rooms[name];
@@ -96,7 +113,7 @@ export function allocateTask() {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'build';
             }
         }).length;
-        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 3 && cur <= creepWithoutWork.length) {
+        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 2 && cur <= creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'build';
         }
     }

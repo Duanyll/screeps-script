@@ -16,7 +16,7 @@ function getSpawnEnergy(room: Room): number {
 function getWorkerCreepPart(energy: number): boolean | BodyPartConstant[] {
     if (energy < 300) return false;
     let ret: BodyPartConstant[] = [];
-    let groupOfPart = Math.floor(energy / 250);
+    let groupOfPart = Math.floor((energy - 50) / 250);
     for (let i = 0; i < groupOfPart; i++) {
         ret.push(WORK);
     }

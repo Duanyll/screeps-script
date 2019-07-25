@@ -1,4 +1,4 @@
-import { refillSpawnOrExtension, constructStructures, repairWallOrRoad } from "./task";
+import { refillSpawnOrExtension, constructStructures, repairWallOrRoad, refillTower } from "./task";
 
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
@@ -19,6 +19,7 @@ export function runHarvester(creep: Creep): void {
             return;
         }
         if (!refillSpawnOrExtension(creep)) {
+            if (refillTower(creep)) return;
             if (!constructStructures(creep)) repairWallOrRoad(creep);
         }
     }
