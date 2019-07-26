@@ -1,5 +1,5 @@
 import * as Config from "config";
-import { takeEnergy, constructStructures, upgradeController, repairWallOrRoad } from "./task";
+import { takeEnergy, constructStructures, upgradeController, repairWall, refillTower, maintainRoad } from "./task";
 
 export function runWorker(creep: Creep) {
     if (creep.carry.energy == 0) {
@@ -12,7 +12,13 @@ export function runWorker(creep: Creep) {
     if (creep.memory.working) {
         switch (creep.memory.workType) {
             case 'build':
-                if (!constructStructures(creep)) repairWallOrRoad(creep);
+                if (!constructStructures(creep)) if (!refillTower(creep)) upgradeController(creep);
+                break;
+            case 'refill':
+                if (!refillTower(creep)) upgradeController(creep);
+                break;
+            case 'maintain':
+                if (!maintainRoad(creep)) constructStructures(creep);
                 break;
             case 'upgrade':
             default:

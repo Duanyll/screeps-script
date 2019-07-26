@@ -1,6 +1,7 @@
 import * as Config from "config"
 
 export function takeEnergy(creep: Creep) {
+
     const storge = creep.room.find(FIND_MY_STRUCTURES, {
         filter: (structure: Structure) => { return structure.structureType == STRUCTURE_CONTAINER }
     });
@@ -37,11 +38,11 @@ export function refillSpawnOrExtension(creep: Creep) : boolean {
     return true;
 }
 
-export function repairWallOrRoad(creep: Creep): boolean {
+export function repairWall(creep: Creep): boolean {
     const repairableWalls = creep.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: (structure: Structure) => {
             return structure.structureType == STRUCTURE_WALL && structure.hits < Config.expectedWallStrength
-                || structure.structureType == STRUCTURE_ROAD && structure.hits < Config.expectedWallStrength
+                || structure.structureType == STRUCTURE_ROAD && (structure as StructureRoad).ticksToDecay < Config.expectedRoadStrength
                 || structure.structureType == STRUCTURE_RAMPART && structure.hits < Config.expectedWallStrength;
         }
     });
@@ -55,11 +56,27 @@ export function repairWallOrRoad(creep: Creep): boolean {
     }
 }
 
+export function maintainRoad(creep: Creep): boolean {
+    const road = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: (structure: Structure) => {
+            return structure.structureType == STRUCTURE_ROAD && (structure as StructureRoad).hits < Config.expectedRoadStrength
+        }
+    });
+    if (road) {
+        if (creep.repair(road) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(road);
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
 export function constructStructures(creep: Creep): boolean {
-    const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
-    if (sites.length > 0) {
-        if (creep.build(sites[0]) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(sites[0]);
+    const site = creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    if (site) {
+        if (creep.build(site) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(site);
         }
         return true;
     } else {
@@ -98,6 +115,8 @@ export function allocateTask() {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == undefined;
             }
         });
+
+        // upgrade
         let upgraderCount = room.find(FIND_MY_CREEPS, {
             filter: (creep: Creep) => {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'upgrade';
@@ -108,13 +127,35 @@ export function allocateTask() {
             creepWithoutWork[cur].memory.workType = 'upgrade';
         }
         if (cur == creepWithoutWork.length) continue;
+
+        // maintain
+        let mtCount = room.find(FIND_MY_CREEPS, {
+            filter: (creep: Creep) => {
+                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'maintain';
+            }
+        }).length;
+        if (mtCount < 1 && cur < creepWithoutWork.length) {
+            creepWithoutWork[cur++].memory.workType = 'maintain';
+        }
+
+        // build
         let builderCount = room.find(FIND_MY_CREEPS, {
             filter: (creep: Creep) => {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'build';
             }
         }).length;
-        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 2 && cur <= creepWithoutWork.length) {
+        if (builderCount < 2 && cur < creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'build';
+        }
+
+        // refill
+        let refillerCount = room.find(FIND_MY_CREEPS, {
+            filter: (creep: Creep) => {
+                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'refill';
+            }
+        }).length;
+        if (refillerCount < 2 && cur < creepWithoutWork.length) {
+            creepWithoutWork[cur++].memory.workType = 'refill';
         }
     }
 }

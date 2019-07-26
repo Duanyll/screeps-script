@@ -14,7 +14,7 @@ export function manageTower(): void {
                 return;
             }
             const closestDamagedStructure = tower.pos.findClosestByRange(FIND_MY_STRUCTURES, {
-                filter: (structure: Structure) => { return structure.hits < structure.hitsMax }
+                filter: (structure: Structure) => { return (structure.structureType != STRUCTURE_RAMPART && structure.structureType != STRUCTURE_WALL) && structure.hits < structure.hitsMax }
             });
             if (closestDamagedStructure) {
                 tower.repair(closestDamagedStructure);

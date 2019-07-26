@@ -99,7 +99,7 @@ export function spawnCreep(): void {
             const workers = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'worker' }
             });
-            if (workers.length < 8) {
+            if (workers.length < 10) {
                 spawnWorker(spawn, energy);
             }
         }
