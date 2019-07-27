@@ -1,7 +1,13 @@
 import * as Config from "config"
 
 export function takeEnergy(creep: Creep) {
-
+    const tombStone = creep.pos.findClosestByPath(FIND_TOMBSTONES);
+    if (tombStone && creep.room.findPath(creep.pos, tombStone.pos).length < tombStone.ticksToDecay) {
+        if (creep.withdraw(tombStone, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(tombStone);
+        }
+        return;
+    }
     const storge = creep.room.find(FIND_MY_STRUCTURES, {
         filter: (structure: Structure) => { return structure.structureType == STRUCTURE_CONTAINER }
     });
@@ -10,7 +16,9 @@ export function takeEnergy(creep: Creep) {
             creep.moveTo(storge[0]);
         }
     } else {
-        const source = creep.pos.findClosestByPath(FIND_SOURCES) as Source;
+        const source = creep.pos.findClosestByPath(FIND_SOURCES, {
+            filter: (source: Source) => { return source.energy > 0;}
+        }) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);
         }
@@ -127,16 +135,6 @@ export function allocateTask() {
             creepWithoutWork[cur].memory.workType = 'upgrade';
         }
         if (cur == creepWithoutWork.length) continue;
-
-        // maintain
-        let mtCount = room.find(FIND_MY_CREEPS, {
-            filter: (creep: Creep) => {
-                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'maintain';
-            }
-        }).length;
-        if (mtCount < 1 && cur < creepWithoutWork.length) {
-            creepWithoutWork[cur++].memory.workType = 'maintain';
-        }
 
         // build
         let builderCount = room.find(FIND_MY_CREEPS, {

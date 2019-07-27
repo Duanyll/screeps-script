@@ -3,7 +3,13 @@ import { refillSpawnOrExtension, constructStructures, repairWall, refillTower } 
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
-    if (creep.carry.energy < creep.carryCapacity) {
+    if (creep.carry.energy == 0) {
+        creep.memory.working = false;
+    }
+    if (!creep.memory.working && creep.carry.energy == creep.carryCapacity) {
+        creep.memory.working = true;
+    }
+    if (!creep.memory.working) {
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);

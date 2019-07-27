@@ -17,9 +17,6 @@ export function runWorker(creep: Creep) {
             case 'refill':
                 if (!refillTower(creep)) upgradeController(creep);
                 break;
-            case 'maintain':
-                if (!maintainRoad(creep)) constructStructures(creep);
-                break;
             case 'upgrade':
             default:
                 upgradeController(creep);
