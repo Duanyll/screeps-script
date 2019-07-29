@@ -1,4 +1,4 @@
-import { refillSpawnOrExtension, constructStructures, repairWall, refillTower } from "./task";
+import { refillSpawnOrExtension, constructStructures, repairWall, refillTower, refillStorge } from "./task";
 
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
@@ -15,18 +15,19 @@ export function runHarvester(creep: Creep): void {
             creep.moveTo(source);
         }
     } else {
-        const storge = creep.room.find(FIND_MY_STRUCTURES, {
-            filter: (structure: Structure) => { return structure.structureType == STRUCTURE_CONTAINER }
+        const link = creep.pos.findInRange(FIND_MY_STRUCTURES, 5, {
+            filter: (structure: Structure) =>
+                structure.structureType == STRUCTURE_LINK && (structure as StructureLink).energy < LINK_CAPACITY
         });
-        if (storge.length > 0) {
-            if (creep.transfer(storge[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(storge[0]);
+        if (link.length > 0) {
+            if (creep.transfer(link[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(link[0]);
             }
             return;
         }
         if (!refillSpawnOrExtension(creep)) {
             if (refillTower(creep)) return;
-            if (!constructStructures(creep)) repairWall(creep);
+            refillStorge(creep);
         }
     }
     // creep.room.createConstructionSite(creep.pos, STRUCTURE_ROAD);
