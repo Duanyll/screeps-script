@@ -1,7 +1,7 @@
 import * as Config from "config";
 
-function getWorkerCreepPart(energy: number): boolean | BodyPartConstant[] {
-    if (energy < 300) return false;
+function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
+    if (energy / total < 0.6) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 250);
     for (let i = 0; i < groupOfPart; i++) {
@@ -18,8 +18,8 @@ function getWorkerCreepPart(energy: number): boolean | BodyPartConstant[] {
     return ret;
 }
 
-function getLowCapicityWorkerCreepPart(energy: number): boolean | BodyPartConstant[] {
-    if (energy < 500) return false;
+function getLowCapicityWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
+    if (energy / total < 0.8) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 150);
     for (let i = 0; i < groupOfPart; i++) {
@@ -32,9 +32,23 @@ function getLowCapicityWorkerCreepPart(energy: number): boolean | BodyPartConsta
     return ret;
 }
 
-function spawnHarvest(source: Source, spawn: StructureSpawn, energy: number, hasLink: boolean): boolean {
+function getClaimerCreepPart(energy: number): boolean | BodyPartConstant[] {
+    if (energy < 1000) return false;
+    let ret: BodyPartConstant[] = [];
+    let groupOfPart = Math.floor((energy - 700) / 50);
+    ret.push(CARRY);
+    ret.push(CARRY);
+    ret.push(CLAIM);
+    for (let i = 0; i < groupOfPart; i++) {
+        ret.push(MOVE);
+    }
+    return ret;
+}
+
+
+function spawnHarvest(source: Source, spawn: StructureSpawn, energy: number, hasLink: boolean, total: number): boolean {
     if (spawn.spawning) return false;
-    const bodyPart = hasLink ? getLowCapicityWorkerCreepPart(energy) : getWorkerCreepPart(energy);
+    const bodyPart = hasLink ? getLowCapicityWorkerCreepPart(energy, total) : getWorkerCreepPart(energy, total);
     if (bodyPart != false) {
         const creepName = `harv-${Game.time}-${source.id}`;
         const creepMemory: CreepMemory = {
@@ -48,13 +62,13 @@ function spawnHarvest(source: Source, spawn: StructureSpawn, energy: number, has
     return false;
 }
 
-function spawnWorker(spawn: StructureSpawn, energy: number): boolean {
+function spawnWorker(spawn: StructureSpawn, energy: number, total: number, room: string = ""): boolean {
     if (spawn.spawning) return false;
-    const bodyPart = getWorkerCreepPart(energy);
+    const bodyPart = getWorkerCreepPart(energy, total);
     if (bodyPart != false) {
         const creepName = `work-${Game.time}-${spawn.id}`;
         const creepMemory: CreepMemory = {
-            role: 'worker', working: false, targetSource: undefined, room: spawn.room.name, workType: undefined
+            role: 'worker', working: false, targetSource: undefined, room: (room != "") ? room : spawn.room.name, workType: undefined
         };
         spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
         console.log(`Spawning creep ${creepName}`);
@@ -63,9 +77,9 @@ function spawnWorker(spawn: StructureSpawn, energy: number): boolean {
     return false;
 }
 
-function spawnUpgrader(spawn: StructureSpawn, energy: number): boolean {
+function spawnUpgrader(spawn: StructureSpawn, energy: number, total: number): boolean {
     if (spawn.spawning) return false;
-    const bodyPart = getLowCapicityWorkerCreepPart(energy);
+    const bodyPart = getLowCapicityWorkerCreepPart(energy, total);
     if (bodyPart != false) {
         const creepName = `upgr-${Game.time}-${spawn.id}`;
         const creepMemory: CreepMemory = {
@@ -73,6 +87,22 @@ function spawnUpgrader(spawn: StructureSpawn, energy: number): boolean {
         };
         spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
         console.log(`Spawning creep ${creepName}`);
+        return true;
+    }
+    return false;
+}
+
+function spawnClaimer(spawn: StructureSpawn, energy: number): boolean {
+    if (spawn.spawning) return false;
+    const bodyPart = getClaimerCreepPart(energy);
+    if (bodyPart != false) {
+        const creepName = `claim-${Game.time}-${Memory['claimTarget']}`;
+        const creepMemory: CreepMemory = {
+            role: 'claimer', working: false, targetSource: undefined, room: Memory['claimTarget'], workType: undefined
+        };
+        spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
+        console.log(`Spawning creep ${creepName}`);
+        Memory['claimTarget'] = undefined;
         return true;
     }
     return false;
@@ -86,6 +116,7 @@ export function spawnCreep(): void {
         const room = Game.rooms[roomName];
         const spawns = room.find(FIND_MY_SPAWNS);
         const energy = room.energyAvailable;
+        const total = room.energyCapacityAvailable;
         if (spawns.length > 0) {
             // 暂时只考虑1个spawn的情况
             const spawn = spawns[0];
@@ -98,12 +129,12 @@ export function spawnCreep(): void {
                 let hasLink = source.pos.findInRange(FIND_MY_STRUCTURES, 5, { filter: (structure: Structure) => { return structure.structureType == STRUCTURE_LINK; } }).length > 0;
                 const harvID: string | undefined = Memory.hervesterForSource[source.id];
                 if (harvID == undefined) {
-                    if (spawnHarvest(source, spawn, energy, hasLink)) { spawnedThisTick = true; return; }
+                    if (spawnHarvest(source, spawn, energy, hasLink, total)) { spawnedThisTick = true; return; }
                 } else {
                     const creep = Game.creeps[harvID];
-                    if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 50)) {
+                    if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
                         // need to spawn a new creep
-                        if (spawnHarvest(source, spawn, energy, hasLink)) { spawnedThisTick = true; return; }
+                        if (spawnHarvest(source, spawn, energy, hasLink, total)) { spawnedThisTick = true; return; }
                     } else {
                         console.log(`No need to spawn creep.`);
                     }
@@ -116,15 +147,27 @@ export function spawnCreep(): void {
                 filter: (creep: Creep) => { return creep.memory.role == 'upgrader' }
             });
             if (upgraders.length < 2) {
-                if (spawnUpgrader(spawn, energy)) return;
+                if (spawnUpgrader(spawn, energy, total)) return;
             }
             // 补充worker
             const workers = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'worker' }
             });
             if (workers.length < 6) {
-                spawnWorker(spawn, energy);
+                spawnWorker(spawn, energy, total);
                 return;
+            }
+
+            if (Memory['claimTarget']) {
+                spawnClaimer(spawn, energy);
+                return;
+            }
+
+            if (Memory['roomWithoutSpawn']) {
+                const creeps = Game.rooms[Memory['roomWithoutSpawn']].find(FIND_MY_CREEPS);
+                if (creeps.length < 3) {
+                    spawnWorker(spawn, energy, total, Memory['roomWithoutSpawn']);
+                }
             }
         }
     }

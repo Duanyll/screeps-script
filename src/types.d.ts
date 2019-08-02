@@ -13,6 +13,7 @@ interface Memory {
   log: any;
   status: any;
   hervesterForSource: any;
+  [str: string]: any;
 }
 
 // `global` extension samples

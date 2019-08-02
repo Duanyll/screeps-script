@@ -10,6 +10,12 @@ export function runHarvester(creep: Creep): void {
         creep.memory.working = true;
     }
     if (!creep.memory.working) {
+        const dropped = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3);
+        if (dropped.length > 0) {
+            if (creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(dropped[0]);
+            }
+        }
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);

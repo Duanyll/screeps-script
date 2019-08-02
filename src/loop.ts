@@ -5,6 +5,7 @@ import * as Config from "config";
 import { runWorker } from "roles/worker";
 import { allocateTask } from "roles/task";
 import { runUpgrader } from "roles/upgrader";
+import { runClaimer } from "roles/claimer";
 
 export function runLoop(): void {
     releaseMemory();
@@ -37,6 +38,9 @@ function manageCreep(): void {
                 break;
             case 'upgrader':
                 runUpgrader(creep);
+                break;
+            case 'claimer':
+                runClaimer(creep);
                 break;
             default:
                 console.log(`Unknown creep role ${creep.memory.role}, creep: ${name}`);

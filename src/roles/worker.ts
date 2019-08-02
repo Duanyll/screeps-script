@@ -1,5 +1,5 @@
 import * as Config from "config";
-import { takeEnergy, constructStructures, upgradeController, repairWall, refillTower, maintainRoad, refillSpawnOrExtension, refillStorge } from "./task";
+import { takeEnergy, constructStructures, upgradeController, repairWall, refillTower, maintainRoad, refillSpawnOrExtension, refillStorge, passEnergyToUpgrader } from "./task";
 
 export function runWorker(creep: Creep) {
     if (creep.carry.energy == 0) {
@@ -10,9 +10,18 @@ export function runWorker(creep: Creep) {
         creep.memory.working = true;
     }
     if (creep.memory.working) {
+        if (creep.room.name != creep.memory.room) {
+            creep.moveTo(Game.rooms[creep.memory.room].controller as StructureController);
+            return;
+        }
+
+        if ((creep.room.controller as StructureController).level < 2) {
+            upgradeController(creep);
+        }
+
         switch (creep.memory.workType) {
             case 'build':
-                if (!constructStructures(creep)) upgradeController(creep);
+                if (!constructStructures(creep)) passEnergyToUpgrader(creep);
                 break;
             case 'refill':
                 if (!refillSpawnOrExtension(creep)) {
@@ -22,7 +31,7 @@ export function runWorker(creep: Creep) {
                 break;
             case 'upgrade':
             default:
-                upgradeController(creep);
+                passEnergyToUpgrader(creep);
                 break;
         }
     } else {

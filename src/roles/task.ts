@@ -1,4 +1,5 @@
 import * as Config from "config"
+import { version } from "punycode";
 
 export function takeEnergy(creep: Creep) {
     const tombStone = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
@@ -8,23 +9,34 @@ export function takeEnergy(creep: Creep) {
         if (creep.withdraw(tombStone, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             creep.moveTo(tombStone);
         }
-        return;
+        return true;
     }
-    const storge = creep.room.find(FIND_MY_STRUCTURES, {
-        filter: (structure: Structure) => structure.structureType == STRUCTURE_CONTAINER
+    const dropped = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 5, {
+        filter: (dropped: Resource) => dropped.amount > 50 && dropped.resourceType == RESOURCE_ENERGY
     });
-    if (storge.length > 0) {
-        if (creep.withdraw(storge[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(storge[0]);
+    if (dropped.length > 0) {
+        if (creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(dropped[0]);
         }
-    } else {
-        const source = creep.pos.findClosestByPath(FIND_SOURCES, {
-            filter: (source: Source) => source.energy > 0
-        }) as Source;
+        return true;
+    }
+    const source = creep.pos.findClosestByPath(FIND_SOURCES, {
+        filter: (source: Source) => source.energy > 0
+    });
+    if (source) {
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);
         }
+        return true;
     }
+    if (creep.memory.workType != 'refill') return false;
+    const storge = creep.room.storage;
+    if (storge) {
+        if (creep.withdraw(storge, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(storge);
+        }
+    }
+    return false;
 }
 
 export function refillSpawnOrExtension(creep: Creep) : boolean {
@@ -101,15 +113,24 @@ export function upgradeController(creep: Creep) {
     }
 }
 
+export function passEnergyToUpgrader(creep: Creep) {
+    const upgrader = creep.pos.findClosestByRange(FIND_MY_CREEPS, { filter: (creep: Creep) => creep.memory.role == 'upgrader' && creep.carry.energy < creep.carryCapacity });
+    if (upgrader) {
+        if (creep.transfer(upgrader, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(upgrader);
+        }
+    }
+}
+
 export function refillTower(creep: Creep) {
-    const sites = creep.room.find(FIND_MY_STRUCTURES, {
+    const sites = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
         filter: (structure: Structure) => {
             return structure.structureType == STRUCTURE_TOWER && (structure as StructureTower).energy < (structure as StructureTower).energyCapacity;
         }
     });
-    if (sites.length > 0) {
-        if (creep.transfer(sites[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(sites[0]);
+    if (sites) {
+        if (creep.transfer(sites, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(sites);
         }
         return true;
     } else {
@@ -140,18 +161,7 @@ export function allocateTask() {
             }
         });
 
-        // upgrade
-        // const upgraderCount = room.find(FIND_MY_CREEPS, {
-        //     filter: (creep: Creep) => {
-        //         return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'upgrade';
-        //     }
-        // }).length;
         let cur = 0;
-        // for (; cur < 2 - upgraderCount && cur < creepWithoutWork.length; cur++) {
-        //     creepWithoutWork[cur].memory.workType = 'upgrade';
-        // }
-        // if (cur == creepWithoutWork.length) { continue; }
-
 
         // refill
         const refillerCount = room.find(FIND_MY_CREEPS, {
@@ -159,7 +169,7 @@ export function allocateTask() {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'refill';
             }
         }).length;
-        if (refillerCount < 2 && cur < creepWithoutWork.length) {
+        if (room.find(FIND_MY_SPAWNS).length > 0 && refillerCount < 2 && cur < creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'refill';
         }
 
@@ -169,7 +179,7 @@ export function allocateTask() {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'build';
             }
         }).length;
-        if (builderCount < 2 && cur < creepWithoutWork.length) {
+        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 2 && cur < creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'build';
         }
     }
