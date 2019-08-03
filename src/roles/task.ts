@@ -157,7 +157,7 @@ export function allocateTask() {
         const room = Game.rooms[name];
         const creepWithoutWork = room.find(FIND_MY_CREEPS, {
             filter: (creep: Creep) => {
-                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == undefined;
+                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == undefined && creep.memory.room == name;
             }
         });
 
@@ -169,8 +169,17 @@ export function allocateTask() {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'refill';
             }
         }).length;
-        if (room.find(FIND_MY_SPAWNS).length > 0 && refillerCount < 2 && cur < creepWithoutWork.length) {
+        if (room.find(FIND_MY_SPAWNS).length > 0 && refillerCount < 1 && cur < creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'refill';
+        }
+
+        const towerRefillerCount = room.find(FIND_MY_CREEPS, {
+            filter: (creep: Creep) => {
+                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'refill-tower';
+            }
+        }).length;
+        if (towerRefillerCount < 1 && cur < creepWithoutWork.length) {
+            creepWithoutWork[cur++].memory.workType = 'refill-tower';
         }
 
         // build

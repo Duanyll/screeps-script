@@ -1,7 +1,7 @@
 import * as Config from "config";
 
 function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
-    if (energy / total < 0.6) return false;
+    if (energy / total < 0.7) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 250);
     for (let i = 0; i < groupOfPart; i++) {
@@ -19,7 +19,7 @@ function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartCo
 }
 
 function getLowCapicityWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
-    if (energy / total < 0.8) return false;
+    if (energy / total < 0.7) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 150);
     for (let i = 0; i < groupOfPart; i++) {
@@ -108,6 +108,22 @@ function spawnClaimer(spawn: StructureSpawn, energy: number): boolean {
     return false;
 }
 
+function spawnMiner(mineral: Mineral, spawn: StructureSpawn, energy: number, total: number): boolean {
+    if (spawn.spawning) return false;
+    const bodyPart = getWorkerCreepPart(energy, total);
+    if (bodyPart != false) {
+        const creepName = `mine-${Game.time}-${mineral.id}`;
+        const creepMemory: CreepMemory = {
+            role: 'harvest', working: true, targetSource: mineral.id, room: spawn.room.name, workType: undefined
+        };
+        spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
+        Memory.hervesterForSource[mineral.id] = creepName;
+        console.log(`Spawning creep ${creepName}`);
+        return true;
+    }
+    return false;
+}
+
 export function spawnCreep(): void {
     if (Memory.hervesterForSource == undefined) {
         Memory.hervesterForSource = new Object();
@@ -135,8 +151,20 @@ export function spawnCreep(): void {
                     if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
                         // need to spawn a new creep
                         if (spawnHarvest(source, spawn, energy, hasLink, total)) { spawnedThisTick = true; return; }
-                    } else {
-                        console.log(`No need to spawn creep.`);
+                    }
+                }
+            });
+
+            const mineral = room.find(FIND_MINERALS);
+            mineral.forEach((mineral: Mineral) => {
+                const harvID: string | undefined = Memory.hervesterForSource[mineral.id];
+                if (harvID == undefined) {
+                    if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
+                } else {
+                    const creep = Game.creeps[harvID];
+                    if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
+                        // need to spawn a new creep
+                        if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
                     }
                 }
             });
@@ -165,7 +193,7 @@ export function spawnCreep(): void {
 
             if (Memory['roomWithoutSpawn']) {
                 const creeps = Game.rooms[Memory['roomWithoutSpawn']].find(FIND_MY_CREEPS);
-                if (creeps.length < 3) {
+                if (creeps.length < 2) {
                     spawnWorker(spawn, energy, total, Memory['roomWithoutSpawn']);
                 }
             }

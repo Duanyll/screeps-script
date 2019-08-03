@@ -17,6 +17,7 @@ export function runWorker(creep: Creep) {
 
         if ((creep.room.controller as StructureController).level < 2) {
             upgradeController(creep);
+            return;
         }
 
         switch (creep.memory.workType) {
@@ -26,7 +27,16 @@ export function runWorker(creep: Creep) {
             case 'refill':
                 if (!refillSpawnOrExtension(creep)) {
                     if (refillTower(creep)) return;
-                    refillStorge(creep);
+                    if (refillStorge(creep)) return;
+                    if (constructStructures(creep)) return;
+                    upgradeController(creep);
+                }
+                break;
+            case 'refill-tower':
+                if (!refillTower(creep)) {
+                    if (refillSpawnOrExtension(creep)) return;
+                    if (refillStorge(creep)) return;
+                    constructStructures(creep);
                 }
                 break;
             case 'upgrade':
