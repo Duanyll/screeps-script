@@ -5,7 +5,8 @@ interface CreepMemory {
   room: string;
   working: boolean;
   targetSource: string | undefined;
-  workType: any
+  workType: any,
+  [str: string]: any;
 }
 
 interface Memory {

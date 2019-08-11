@@ -2,10 +2,10 @@ import { refillSpawnOrExtension, constructStructures, repairWall, refillTower, r
 
 export function runMiner(creep: Creep): void {
     const total = _.sum(creep.carry);
-    if (total == 0) {
+    if (total < creep.carryCapacity) {
         creep.memory.working = true;
     }
-    if (!creep.memory.working && total == creep.carryCapacity) {
+    if (creep.memory.working && total == creep.carryCapacity) {
         creep.memory.working = false;
     }
     if (creep.memory.working) {

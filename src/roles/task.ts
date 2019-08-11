@@ -2,6 +2,15 @@ import * as Config from "config"
 import { version } from "punycode";
 
 export function takeEnergy(creep: Creep) {
+    if (Memory['emergency'][creep.room.name]) {
+        const storge = creep.room.storage;
+        if (storge) {
+            if (creep.withdraw(storge, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(storge);
+            }
+            return false;
+        }
+    }
     const tombStone = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
         filter: (tombStone: Tombstone) => tombStone.store.energy > 0
     });
@@ -119,6 +128,8 @@ export function passEnergyToUpgrader(creep: Creep) {
         if (creep.transfer(upgrader, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             creep.moveTo(upgrader);
         }
+    } else {
+        upgradeController(creep);
     }
 }
 
@@ -139,12 +150,10 @@ export function refillTower(creep: Creep) {
 }
 
 export function refillStorge(creep: Creep) {
-    const storge = creep.room.find(FIND_MY_STRUCTURES, {
-        filter: (structure: Structure) => { return structure.structureType == STRUCTURE_STORAGE }
-    });
-    if (storge.length > 0) {
-        if (creep.transfer(storge[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(storge[0]);
+    const storge = creep.room.storage;
+    if (storge && storge.store.energy < 100000) {
+        if (creep.transfer(storge, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(storge);
         }
         return true;
     } else {
@@ -161,6 +170,11 @@ export function allocateTask() {
             }
         });
 
+        if (Memory['emergency'][name]) {
+            creepWithoutWork.forEach(creep => {
+                creep.memory.workType = 'refill';
+            });
+        }
         let cur = 0;
 
         // refill

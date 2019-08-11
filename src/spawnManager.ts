@@ -1,7 +1,7 @@
 import * as Config from "config";
 
 function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
-    if (energy / total < 0.7) return false;
+    if (energy / total < 0.5 || energy < 300) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 250);
     for (let i = 0; i < groupOfPart; i++) {
@@ -19,7 +19,7 @@ function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartCo
 }
 
 function getLowCapicityWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
-    if (energy / total < 0.7) return false;
+    if (energy / total < 0.5 || energy < 300) return false;
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 150);
     for (let i = 0; i < groupOfPart; i++) {
@@ -77,9 +77,9 @@ function spawnWorker(spawn: StructureSpawn, energy: number, total: number, room:
     return false;
 }
 
-function spawnUpgrader(spawn: StructureSpawn, energy: number, total: number): boolean {
+function spawnUpgrader(spawn: StructureSpawn, energy: number, total: number, hasLink: boolean): boolean {
     if (spawn.spawning) return false;
-    const bodyPart = getLowCapicityWorkerCreepPart(energy, total);
+    const bodyPart = hasLink ? getLowCapicityWorkerCreepPart(energy, total) : getWorkerCreepPart(energy, total);
     if (bodyPart != false) {
         const creepName = `upgr-${Game.time}-${spawn.id}`;
         const creepMemory: CreepMemory = {
@@ -114,7 +114,7 @@ function spawnMiner(mineral: Mineral, spawn: StructureSpawn, energy: number, tot
     if (bodyPart != false) {
         const creepName = `mine-${Game.time}-${mineral.id}`;
         const creepMemory: CreepMemory = {
-            role: 'harvest', working: true, targetSource: mineral.id, room: spawn.room.name, workType: undefined
+            role: 'miner', working: true, targetSource: mineral.id, room: spawn.room.name, workType: undefined
         };
         spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
         Memory.hervesterForSource[mineral.id] = creepName;
@@ -139,6 +139,15 @@ export function spawnCreep(): void {
             if (spawn.spawning) continue;
             let spawnedThisTick = false;
 
+            const creepCount = room.find(FIND_MY_CREEPS).length;
+            // Emergency mode
+            if (creepCount < 4) {
+                Memory['emergency'][roomName] = true;
+                spawnWorker(spawn, energy, 300);
+                return;
+            }
+            if (Memory['emergency'][roomName] && energy / total > 0.5) Memory['emergency'][roomName] = false;
+
             // 补充harvest
             const sources = room.find(FIND_SOURCES);
             sources.forEach((source: Source) => {
@@ -155,33 +164,40 @@ export function spawnCreep(): void {
                 }
             });
 
-            const mineral = room.find(FIND_MINERALS);
-            mineral.forEach((mineral: Mineral) => {
-                const harvID: string | undefined = Memory.hervesterForSource[mineral.id];
-                if (harvID == undefined) {
-                    if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
-                } else {
-                    const creep = Game.creeps[harvID];
-                    if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
-                        // need to spawn a new creep
-                        if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
-                    }
-                }
-            });
-
             if (spawnedThisTick) continue;
             // 补充upgrader
             const upgraders = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'upgrader' }
             });
+            const hasLink = (room.controller as StructureController).pos.findInRange(FIND_MY_STRUCTURES, 5, {
+                filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK
+            }).length > 0;
             if (upgraders.length < 2) {
-                if (spawnUpgrader(spawn, energy, total)) return;
+                if (spawnUpgrader(spawn, energy, total, hasLink)) return;
             }
+
+            if (room.find(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_EXTRACTOR }).length > 0) {
+                const mineral = room.find(FIND_MINERALS);
+                mineral.forEach((mineral: Mineral) => {
+                    if (mineral.mineralAmount == 0) return;
+                    const harvID: string | undefined = Memory.hervesterForSource[mineral.id];
+                    if (harvID == undefined) {
+                        if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
+                    } else {
+                        const creep = Game.creeps[harvID];
+                        if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
+                            // need to spawn a new creep
+                            if (spawnMiner(mineral, spawn, energy, total)) { spawnedThisTick = true; return; }
+                        }
+                    }
+                });
+            }
+            if (spawnedThisTick) return;
             // 补充worker
             const workers = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'worker' }
             });
-            if (workers.length < 6) {
+            if (workers.length < 5) {
                 spawnWorker(spawn, energy, total);
                 return;
             }

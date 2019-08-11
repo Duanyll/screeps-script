@@ -11,7 +11,9 @@ export function runClaimer(creep: Creep) {
     }
     if (creep.memory.working) {
         if (creep.room.name != creep.memory.room) {
-            creep.moveTo(Game.rooms[creep.memory.room].controller as StructureController);
+            // creep.moveTo(Game.rooms[creep.memory.room].controller as StructureController);
+            const dir = creep.room.findExitTo(creep.memory.room) as FindConstant;
+            creep.moveTo(creep.pos.findClosestByPath(dir) as RoomPosition);
         } else {
             if (creep.claimController(creep.room.controller as StructureController) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller as StructureController);
