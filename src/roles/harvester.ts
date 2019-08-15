@@ -3,10 +3,11 @@ import { refillSpawnOrExtension, constructStructures, repairWall, refillTower, r
 // 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
+    const carrySum = _.sum(creep.carry);
     if (creep.carry.energy == 0) {
         creep.memory.working = false;
     }
-    if (!creep.memory.working && creep.carry.energy == creep.carryCapacity) {
+    if (!creep.memory.working && carrySum == creep.carryCapacity) {
         creep.memory.working = true;
     }
     if (!creep.memory.working) {
@@ -22,6 +23,21 @@ export function runHarvester(creep: Creep): void {
             creep.moveTo(source);
         }
     } else {
+        if (carrySum > creep.carry.energy) {
+            if (creep.room.storage) {
+                const storge = creep.room.storage as StructureStorage;
+                if (!creep.pos.isNearTo(storge)) {
+                    creep.moveTo(storge);
+                } else {
+                    // transfer all resources
+                    for (const resourceType in creep.carry) {
+                        if (resourceType == RESOURCE_ENERGY) continue;
+                        creep.transfer(storge, resourceType as ResourceConstant);
+                    }
+                }
+                return;
+            }
+        }
         const link = creep.pos.findInRange(FIND_MY_STRUCTURES, 5, {
             filter: (structure: Structure) =>
                 structure.structureType == STRUCTURE_LINK && (structure as StructureLink).energy < LINK_CAPACITY

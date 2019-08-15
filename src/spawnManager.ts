@@ -152,6 +152,7 @@ export function spawnCreep(): void {
             const sources = room.find(FIND_SOURCES);
             sources.forEach((source: Source) => {
                 let hasLink = source.pos.findInRange(FIND_MY_STRUCTURES, 5, { filter: (structure: Structure) => { return structure.structureType == STRUCTURE_LINK; } }).length > 0;
+                if (!hasLink) return;
                 const harvID: string | undefined = Memory.hervesterForSource[source.id];
                 if (harvID == undefined) {
                     if (spawnHarvest(source, spawn, energy, hasLink, total)) { spawnedThisTick = true; return; }
