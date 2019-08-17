@@ -7,6 +7,7 @@ import { allocateTask } from "roles/task";
 import { runUpgrader } from "roles/upgrader";
 import { runClaimer } from "roles/claimer";
 import { runMiner } from "roles/miner";
+import { runRemoteHarvester } from "roles/remoteHarvester";
 
 export function runLoop(): void {
     releaseMemory();
@@ -46,6 +47,9 @@ function manageCreep(): void {
             case 'miner':
                 runMiner(creep);
                 break;
+            case 'remoteHarvest':
+                runRemoteHarvester(creep);
+                break;
             default:
                 console.log(`Unknown creep role ${creep.memory.role}, creep: ${name}`);
                 break;
@@ -56,13 +60,13 @@ function manageCreep(): void {
 function manageLink() {
     for (const name in Game.rooms) {
         const room = Game.rooms[name];
-        const sources = room.find(FIND_SOURCES);
-        sources.forEach(source => {
-            const link = source.pos.findInRange(FIND_MY_STRUCTURES, 5, { filter: (structure: Structure) => { return structure.structureType == STRUCTURE_LINK; } }) as StructureLink[];
-            if (link.length > 0) {
-                if (link[0].energy == link[0].energyCapacity) {
-                    link[0].transferEnergy(((room.controller as StructureController).pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (structure: Structure) => structure.structureType == STRUCTURE_LINK }) as StructureLink));
-                }
+        const links = room.find(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK }) as StructureLink[];
+        const controller = room.controller as StructureController;
+        const targetLink = controller.pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK }) as StructureLink;
+        links.forEach(link => {
+            if (link.id == targetLink.id) return;
+            if (link.energy == link.energyCapacity) {
+                link.transferEnergy(targetLink);
             }
         });
     }

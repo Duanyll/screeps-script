@@ -1,6 +1,5 @@
 import { refillSpawnOrExtension, constructStructures, repairWall, refillTower, refillStorge, upgradeController } from "./task";
 
-// 采集energy, 补充到extension或spawn
 export function runHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
     const carrySum = _.sum(creep.carry);

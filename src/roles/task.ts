@@ -29,6 +29,16 @@ export function takeEnergy(creep: Creep) {
         }
         return true;
     }
+    const link = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
+        filter: (structure: Structure) =>
+            structure.structureType == STRUCTURE_LINK && (structure as StructureLink).energy > 0
+    });
+    if (link) {
+        if (creep.withdraw(link, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(link);
+        }
+        return true;
+    }
     const source = creep.pos.findClosestByPath(FIND_SOURCES, {
         filter: (source: Source) => source.energy > 0
     });
@@ -37,15 +47,9 @@ export function takeEnergy(creep: Creep) {
             creep.moveTo(source);
         }
         return true;
+    } else {
+        return false;
     }
-    if (creep.memory.workType != 'refill') return false;
-    const storge = creep.room.storage;
-    if (storge) {
-        if (creep.withdraw(storge, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(storge);
-        }
-    }
-    return false;
 }
 
 export function refillSpawnOrExtension(creep: Creep) : boolean {
