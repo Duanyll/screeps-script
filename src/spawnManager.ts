@@ -79,16 +79,18 @@ function spawnHarvest(source: Source, spawn: StructureSpawn, energy: number, tot
     return false;
 }
 
-function spawnRemoteHarvest(source: Source, spawn: StructureSpawn, energy: number, total: number): boolean {
+function spawnRemoteHarvest(id: string, spawn: StructureSpawn, energy: number, total: number): boolean {
     if (spawn.spawning) return false;
-    const bodyPart = getHarvesterCreepPart(energy, total);
+    const bodyPart = getWorkerCreepPart(energy, total);
+    const sourceid = id.split("|")[0];
+    const room = id.split("|")[1];
     if (bodyPart != false) {
-        const creepName = `rhrv-${Game.time}-${source.id}`;
+        const creepName = `rhrv-${Game.time}-${sourceid}`;
         const creepMemory: CreepMemory = {
-            role: 'remoteHarvest', working: true, targetSource: source.id, room: spawn.room.name, workType: undefined
+            role: 'remoteHarvest', working: true, targetSource: sourceid, room: spawn.room.name, workType: undefined, sourceRoom: room
         };
         spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
-        Memory.hervesterForSource[source.id] = creepName;
+        Memory.hervesterForSource[id] = creepName;
         console.log(`Spawning creep ${creepName}`);
         return true;
     }
@@ -210,11 +212,12 @@ export function spawnCreep(): void {
                 if (spawnUpgrader(spawn, energy, total, hasLink)) return;
             }
 
+            const workersExpected = ((room.controller as StructureController).level < 6 || room.find(FIND_CONSTRUCTION_SITES).length > 3) ? 6 : 3;
             // 补充worker
             const workers = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'worker' }
             });
-            if (workers.length < 5) {
+            if (workers.length < workersExpected) {
                 spawnWorker(spawn, energy, total);
                 return;
             }
@@ -224,19 +227,14 @@ export function spawnCreep(): void {
             }
             const remoteSources = Memory['remoteSources'][roomName] as string[];
             remoteSources.forEach((id: string) => {
-                const source = Game.getObjectById(id) as Source | undefined;
-                if (source == undefined) {
-                    console.log(`Bad remote source id ${id}`);
-                    return;
-                }
                 const harvID: string | undefined = Memory.hervesterForSource[id];
                 if (harvID == undefined) {
-                    if (spawnRemoteHarvest(source, spawn, energy, total)) { spawnedThisTick = true; return; }
+                    if (spawnRemoteHarvest(id, spawn, energy, total)) { spawnedThisTick = true; return; }
                 } else {
                     const creep = Game.creeps[harvID];
                     if (creep == undefined || (creep.ticksToLive != undefined && creep.ticksToLive < 100)) {
                         // need to spawn a new creep
-                        if (spawnRemoteHarvest(source, spawn, energy, total)) { spawnedThisTick = true; return; }
+                        if (spawnRemoteHarvest(id, spawn, energy, total)) { spawnedThisTick = true; return; }
                     }
                 }
             });

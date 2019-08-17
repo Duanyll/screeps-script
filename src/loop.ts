@@ -65,7 +65,7 @@ function manageLink() {
         const targetLink = controller.pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK }) as StructureLink;
         links.forEach(link => {
             if (link.id == targetLink.id) return;
-            if (link.energy == link.energyCapacity) {
+            if (targetLink.energy < 50) {
                 link.transferEnergy(targetLink);
             }
         });

@@ -1,7 +1,7 @@
 import * as Config from "config"
 import { version } from "punycode";
 
-export function takeEnergy(creep: Creep) {
+export function takeEnergy(creep: Creep, isUpgrader: boolean = false) {
     if (Memory['emergency'][creep.room.name]) {
         const storge = creep.room.storage;
         if (storge) {
@@ -31,7 +31,7 @@ export function takeEnergy(creep: Creep) {
     }
     const link = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
         filter: (structure: Structure) =>
-            structure.structureType == STRUCTURE_LINK && (structure as StructureLink).energy > 0
+            structure.structureType == STRUCTURE_LINK && (structure as StructureLink).energy > ((isUpgrader) ? 0 : 400)
     });
     if (link) {
         if (creep.withdraw(link, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
@@ -191,6 +191,16 @@ export function allocateTask() {
             creepWithoutWork[cur++].memory.workType = 'refill';
         }
 
+        // build
+        const builderCount = room.find(FIND_MY_CREEPS, {
+            filter: (creep: Creep) => {
+                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'build';
+            }
+        }).length;
+        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 1 && cur < creepWithoutWork.length) {
+            creepWithoutWork[cur++].memory.workType = 'build';
+        }
+
         const towerRefillerCount = room.find(FIND_MY_CREEPS, {
             filter: (creep: Creep) => {
                 return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'refill-tower';
@@ -198,16 +208,6 @@ export function allocateTask() {
         }).length;
         if (towerRefillerCount < 1 && cur < creepWithoutWork.length) {
             creepWithoutWork[cur++].memory.workType = 'refill-tower';
-        }
-
-        // build
-        const builderCount = room.find(FIND_MY_CREEPS, {
-            filter: (creep: Creep) => {
-                return creep.memory.role == 'worker' && creep.memory.working && creep.memory.workType == 'build';
-            }
-        }).length;
-        if (room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 && builderCount < 2 && cur < creepWithoutWork.length) {
-            creepWithoutWork[cur++].memory.workType = 'build';
         }
     }
 }

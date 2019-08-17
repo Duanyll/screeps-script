@@ -12,6 +12,6 @@ export function runUpgrader(creep: Creep) {
     if (creep.memory.working) {
         upgradeController(creep);
     } else {
-        takeEnergy(creep);
+        takeEnergy(creep, true);
     }
 }

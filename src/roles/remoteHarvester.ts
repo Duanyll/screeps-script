@@ -10,6 +10,11 @@ export function runRemoteHarvester(creep: Creep): void {
         creep.memory.working = true;
     }
     if (!creep.memory.working) {
+        if (creep.room.name != creep.memory["sourceRoom"]) {
+            const dir = creep.room.findExitTo(creep.memory["sourceRoom"]) as FindConstant;
+            creep.moveTo(creep.pos.findClosestByPath(dir) as RoomPosition);
+            return;
+        }
         const dropped = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3, { filter: (resource: Resource) => resource.resourceType == RESOURCE_ENERGY });
         if (dropped.length > 0) {
             if (creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
