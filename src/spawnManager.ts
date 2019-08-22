@@ -49,16 +49,34 @@ function getUpgraderCreepPart(energy: number, total: number): boolean | BodyPart
     return ret;
 }
 
-function getClaimerCreepPart(energy: number): boolean | BodyPartConstant[] {
-    if (energy < 1000) return false;
+function getAttackerCreepPart(energy: number): boolean | BodyPartConstant[] {
+    if (energy < 2670) return false;
     let ret: BodyPartConstant[] = [];
-    let groupOfPart = Math.floor((energy - 700) / 50);
-    ret.push(CARRY);
-    ret.push(CARRY);
-    ret.push(CLAIM);
+    for (let i = 1; i <= 9; i++) {
+        ret.push(TOUGH);
+    }
+    for (let i = 1; i <= 25; i++) {
+        ret.push(MOVE);
+    }
+    for (let i = 1; i <= 15; i++) {
+        ret.push(ATTACK);
+    }
+    ret.push(MOVE);
+    return ret;
+}
+
+function getClaimerCreepPart(energy: number): boolean | BodyPartConstant[] {
+    if (energy < 1350) return false;
+    let ret: BodyPartConstant[] = [];
+    let groupOfPart = Math.floor((energy - 50) / 650);
+    // ret.push(CLAIM);
     for (let i = 0; i < groupOfPart; i++) {
         ret.push(MOVE);
     }
+    for (let i = 0; i < groupOfPart; i++) {
+        ret.push(CLAIM);
+    }
+    ret.push(MOVE);
     return ret;
 }
 
@@ -122,6 +140,22 @@ function spawnUpgrader(spawn: StructureSpawn, energy: number, total: number, has
         };
         spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
         console.log(`Spawning creep ${creepName}`);
+        return true;
+    }
+    return false;
+}
+
+function spawnAttacker(spawn: StructureSpawn, energy: number): boolean {
+    if (spawn.spawning) return false;
+    const bodyPart = getAttackerCreepPart(energy);
+    if (bodyPart != false) {
+        const creepName = `atck-${Game.time}-${Memory['attackTarget'].name}`;
+        const creepMemory: CreepMemory = {
+            role: 'attacker', working: false, targetSource: undefined, room: Memory['attackTarget'].name, workType: undefined
+        };
+        spawn.spawnCreep(bodyPart as BodyPartConstant[], creepName, { memory: creepMemory });
+        console.log(`Spawning creep ${creepName}`);
+        Memory['attackTarget'].count--;
         return true;
     }
     return false;
@@ -257,6 +291,11 @@ export function spawnCreep(): void {
                 });
             }
             if (spawnedThisTick) return;
+
+            if (Memory['attackTarget'].count > 0) {
+                spawnAttacker(spawn, energy);
+                return;
+            }
 
             if (Memory['claimTarget']) {
                 spawnClaimer(spawn, energy);

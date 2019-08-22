@@ -108,7 +108,7 @@ export function maintainRoad(creep: Creep): boolean {
 }
 
 export function constructStructures(creep: Creep): boolean {
-    const site = creep.pos.findClosestByPath(FIND_CONSTRUCTION_SITES);
+    const site = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES);
     if (site) {
         if (creep.build(site) == ERR_NOT_IN_RANGE) {
             creep.moveTo(site);

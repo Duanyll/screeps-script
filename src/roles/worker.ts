@@ -8,7 +8,7 @@ export function runWorker(creep: Creep) {
         creep.moveTo(creep.pos.findClosestByPath(dir) as RoomPosition);
         return;
     }
-    
+
     if (creep.carry.energy == 0) {
         creep.memory.working = false;
         creep.memory.workType = undefined;
@@ -17,7 +17,7 @@ export function runWorker(creep: Creep) {
         creep.memory.working = true;
     }
     if (creep.memory.working) {
-        if ((creep.room.controller as StructureController).level < 2) {
+        if ((creep.room.controller as StructureController).level < 2 && (creep.room.controller as StructureController).upgradeBlocked == 0) {
             upgradeController(creep);
             return;
         }
@@ -44,6 +44,7 @@ export function runWorker(creep: Creep) {
                 break;
             case 'upgrade':
             default:
+                if (constructStructures(creep)) return;
                 passEnergyToUpgrader(creep);
                 break;
         }

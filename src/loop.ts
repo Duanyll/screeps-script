@@ -8,6 +8,7 @@ import { runUpgrader } from "roles/upgrader";
 import { runClaimer } from "roles/claimer";
 import { runMiner } from "roles/miner";
 import { runRemoteHarvester } from "roles/remoteHarvester";
+import { runAttacker } from "roles/attacker";
 
 export function runLoop(): void {
     releaseMemory();
@@ -50,6 +51,9 @@ function manageCreep(): void {
             case 'remoteHarvest':
                 runRemoteHarvester(creep);
                 break;
+            case 'attacker':
+                runAttacker(creep);
+                break;
             default:
                 console.log(`Unknown creep role ${creep.memory.role}, creep: ${name}`);
                 break;
@@ -60,12 +64,13 @@ function manageCreep(): void {
 function manageLink() {
     for (const name in Game.rooms) {
         const room = Game.rooms[name];
+        if (!room.controller || !room.controller.my) continue;
         const links = room.find(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK }) as StructureLink[];
         const controller = room.controller as StructureController;
         const targetLink = controller.pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (struct: Structure) => struct.structureType == STRUCTURE_LINK }) as StructureLink;
         links.forEach(link => {
             if (link.id == targetLink.id) return;
-            if (targetLink.energy < 50) {
+            if (targetLink.energy < 50 || link.energy == LINK_CAPACITY) {
                 link.transferEnergy(targetLink);
             }
         });
