@@ -17,5 +17,6 @@ steps:
 
 - script: |
     npm install
-    npm run build
+    echo "{ \"main\": { \"token\": \"$(Screeps Secret Token)\", \"protocol\": \"https\", \"hostname\": \"screeps.com\", \"port\": 443, \"path\": \"/\", \"branch\": \"main\" }" > screeps.json
+    npm run push-main
   displayName: 'npm install and build'
