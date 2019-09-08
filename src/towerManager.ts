@@ -22,7 +22,7 @@ export function manageTower(): void {
             }
             const cloestRepairable = tower.pos.findClosestByRange(FIND_STRUCTURES, {
                 filter: (structure: Structure) => {
-                    return (structure.structureType == STRUCTURE_WALL || structure.structureType == STRUCTURE_RAMPART) && structure.hits < expectedWallStrength
+                    return /*(structure.structureType == STRUCTURE_WALL || structure.structureType == STRUCTURE_RAMPART) &&*/ structure.hits < expectedWallStrength
                         || (structure.structureType == STRUCTURE_ROAD && structure.hits < expectedRoadStrength);
                 }
             });

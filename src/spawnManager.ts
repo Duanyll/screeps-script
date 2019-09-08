@@ -2,7 +2,7 @@ import * as Config from "config";
 
 function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
     if ((energy < 1800 && energy / total < 0.5) || energy < 300) return false;
-    energy = Math.min(energy, 3000);
+    energy = Math.min(energy, 2200);
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 250);
     for (let i = 0; i < groupOfPart; i++) {
@@ -21,7 +21,7 @@ function getWorkerCreepPart(energy: number, total: number): boolean | BodyPartCo
 
 function getHarvesterCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
     if ((energy < 3000 && energy / total < 0.8) || energy < 300) return false;
-    energy = Math.min(energy, 3000)
+    energy = Math.min(energy, 2000)
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 150);
     for (let i = 0; i < groupOfPart; i++) {
@@ -36,7 +36,7 @@ function getHarvesterCreepPart(energy: number, total: number): boolean | BodyPar
 
 function getUpgraderCreepPart(energy: number, total: number): boolean | BodyPartConstant[] {
     if ((energy < 2400 && energy / total < 0.5) || energy < 300) return false;
-    energy = Math.min(energy, 3000)
+    energy = Math.min(energy, 2000)
     let ret: BodyPartConstant[] = [];
     let groupOfPart = Math.floor((energy - 50) / 150);
     for (let i = 0; i < groupOfPart; i++) {
@@ -158,6 +158,7 @@ function spawnAttacker(spawn: StructureSpawn, energy: number): boolean {
         Memory['attackTarget'].count--;
         return true;
     }
+    // console.log('attacker energy not enough' + energy.toString());
     return false;
 }
 
@@ -200,9 +201,10 @@ export function spawnCreep(): void {
     for (const roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         const spawns = room.find(FIND_MY_SPAWNS);
-        const energy = room.energyAvailable;
-        const total = room.energyCapacityAvailable;
         if (spawns.length > 0) {
+            const energy = room.energyAvailable;
+            console.log(`Energy in room ${roomName}: ${energy}`)
+            const total = room.energyCapacityAvailable;
             // 暂时只考虑1个spawn的情况
             const spawn = spawns[0];
             if (spawn.spawning) continue;
@@ -246,7 +248,7 @@ export function spawnCreep(): void {
                 if (spawnUpgrader(spawn, energy, total, hasLink)) return;
             }
 
-            const workersExpected = ((room.controller as StructureController).level < 6 || room.find(FIND_CONSTRUCTION_SITES).length > 3) ? 6 : 3;
+            const workersExpected = ((room.controller as StructureController).level < 6 || room.find(FIND_CONSTRUCTION_SITES).length > 5) ? 6 : 3;
             // 补充worker
             const workers = room.find(FIND_MY_CREEPS, {
                 filter: (creep: Creep) => { return creep.memory.role == 'worker' }
@@ -290,16 +292,17 @@ export function spawnCreep(): void {
                     }
                 });
             }
-            if (spawnedThisTick) return;
+            if (spawnedThisTick) continue;
 
             if (Memory['attackTarget'].count > 0) {
+                // console.log('Trying spawn attacker');
                 spawnAttacker(spawn, energy);
-                return;
+                continue;
             }
 
             if (Memory['claimTarget']) {
                 spawnClaimer(spawn, energy);
-                return;
+                continue;
             }
 
             if (Memory['roomWithoutSpawn']) {

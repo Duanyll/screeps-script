@@ -1,4 +1,5 @@
 import { refillSpawnOrExtension, constructStructures, repairWall, refillTower, refillStorge, upgradeController } from "./task";
+import { expectedRoadStrength } from "config";
 
 export function runRemoteHarvester(creep: Creep): void {
     // 简单的(采集->就近卸下)循环
@@ -25,6 +26,8 @@ export function runRemoteHarvester(creep: Creep): void {
         const source = Game.getObjectById(creep.memory.targetSource) as Source;
         if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
             creep.moveTo(source);
+            const cur = creep.pos.lookFor(LOOK_STRUCTURES);
+            // creep.pos.createConstructionSite(STRUCTURE_ROAD);
         }
     } else {
         if (creep.room.name != creep.memory.room) {
@@ -32,6 +35,17 @@ export function runRemoteHarvester(creep: Creep): void {
             creep.moveTo(creep.pos.findClosestByPath(dir) as RoomPosition);
             return;
         } else {
+            const site = creep.pos.findInRange(FIND_CONSTRUCTION_SITES, 2);
+            if (site.length > 0) {
+                creep.build(site[0]);
+                return;
+            } else {
+                const road = creep.pos.findInRange(FIND_STRUCTURES, 2, { filter: (struct: Structure) => struct.structureType == STRUCTURE_ROAD && struct.hits < expectedRoadStrength }) as StructureRoad[];
+                if (road.length > 0) {
+                    creep.repair(road[0]);
+                    return;
+                }
+            }
             const link = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, { filter: (structure: Structure) => structure.structureType == STRUCTURE_LINK });
             if (link) {
                 if (!creep.pos.isNearTo(link)) {
